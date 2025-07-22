@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <string>
 #include <vector>
@@ -19,14 +19,14 @@ const std::string DEFAULT_SEARCH_DIR = "./";
 std::vector<std::string> SearchFilesInWorkingDirectory();
 std::string glob_to_regex(const std::string& glob);
 
-//ÆÄÀÏ Å¬·¡½º °ü¸®¸¦ À§ÇÑ observer ÆĞÅÏ
+//íŒŒì¼ í´ë˜ìŠ¤ ê´€ë¦¬ë¥¼ ìœ„í•œ observer íŒ¨í„´
 class IDirObserver {
 public:
 	virtual void OnDirChanged(const std::string& newDir) = 0;
 	virtual ~IDirObserver() = default;
 };
 
-//µğ·ºÅä¸® Ã³¸®¸¦ À§ÇÑ singleton Å¬·¡½º
+//ë””ë ‰í† ë¦¬ ì²˜ë¦¬ë¥¼ ìœ„í•œ singleton í´ë˜ìŠ¤
 class DirSingleton {
 private:
 	static DirSingleton* instance;

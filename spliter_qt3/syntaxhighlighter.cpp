@@ -178,7 +178,8 @@ void ASTHighlighter::setErrors(const ErrorCollector& ec, const std::vector<QStri
 		int line = error.line - 1;
 		if (line >= sourceLines.size()) continue;
 
-		int col = byteOffsetToUtf16Column(sourceLines[line], error.column);
+		//여기서 1은 tab 보정
+		int col = byteOffsetToUtf16Column(sourceLines[line], error.column) + 1;
 		int len = error.size;
 
 		HighlightType type = (error.severity == Severity::Warning) ? HighlightType::Warning : HighlightType::Error;

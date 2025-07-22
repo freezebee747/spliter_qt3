@@ -1,5 +1,5 @@
-﻿#include "parser.h"
-#include "function.h"
+﻿#include "function.h"
+#include "parser.h"
 
 Variable MakeVariable(int line, const std::string& variable) {
 	Variable var;
@@ -310,10 +310,22 @@ bool Parser::VariableRef_expend(std::string& var, std::unordered_set<std::string
 }
 
 bool Parser::Function_expend(std::string& func) {
+	
+	std::string result;
 
 	std::string func_name = ExtractFunctionName(func);
 	std::vector<std::string> func_arg = ExtractFunctionArguments(func);
-	std::string result = Active_function(func_name, func_arg);
+
+
+	if (IsNeedFunctionContext(func_name)) {
+		FunctionContext fc;
+		fc.parser = this;
+		fc.call_by_parser = true;
+		result = Active_function(func_name, func_arg, fc);
+	}
+	else {
+		result = Active_function(func_name, func_arg);
+	}
 	func.swap(result);
 	return true;
 }
@@ -336,6 +348,10 @@ ErrorCollector& Parser::GetError() {
 
 std::vector<Comment> Parser::GetComment(){
 	return comment_list;
+}
+
+std::optional<std::string> Parser::GetDefaultTarget(){
+	return default_target;
 }
 
 
@@ -490,11 +506,13 @@ void Parser::parsing(const std::string& text){
 
 					std::vector<std::string> prerequisites = SplitSpace(trim(safe_substr(first_line, colon_pos + 1, intTemp - colon_pos - 1)));
 					std::vector<std::pair<int, std::string>> preq_with_column;
+					int increment = 0;
 					for (const auto& prereq : prerequisites) {
 						std::pair<size_t, std::string> temp;
-						temp.first = first_line.find(prereq);
+						temp.first = first_line.find(prereq, colon_pos + increment);
 						temp.second = prereq;
 						preq_with_column.push_back(temp);
+						increment += prereq.size();
 					}
 
 					mt.prerequisite = preq_with_column;
@@ -514,6 +532,11 @@ void Parser::parsing(const std::string& text){
 						mt.recipes.push_back({ block._lines[i].first, trim(block._lines[i].second) });
 					}
 					nodes.push_back(std::make_shared<Multiple_Target>(mt));
+
+					if (default_target == std::nullopt) {
+						default_target = targets[0];
+					}
+
 					continue;
 				}
 				//normal explicit rule
@@ -527,11 +550,13 @@ void Parser::parsing(const std::string& text){
 
 					std::vector<std::string> prerequisites = SplitSpace(trim(safe_substr(first_line, colon_pos + 1, intTemp - colon_pos - 1)));
 					std::vector<std::pair<int, std::string>> preq_with_column;
+					int increment = 0;
 					for (const auto& prereq : prerequisites) {
 						std::pair<size_t, std::string> temp;
-						temp.first = first_line.find(prereq);
+						temp.first = first_line.find(prereq, colon_pos + increment);
 						temp.second = prereq;
 						preq_with_column.push_back(temp);
+						increment += prereq.size();
 					}
 
 					ex.prerequisite = preq_with_column;
@@ -551,6 +576,11 @@ void Parser::parsing(const std::string& text){
 						ex.recipes.push_back({ block._lines[i].first, trim(block._lines[i].second) });
 					}
 					nodes.push_back(std::make_shared<Explicit_Rule>(ex));
+
+					if (default_target == std::nullopt) {
+						default_target = targets[0];
+					}
+
 					continue;
 				}
 			}

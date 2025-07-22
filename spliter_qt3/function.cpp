@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <regex>
+#include <cassert>
 
-//#include "syntax.h"
 #include "function.h"
 #include "read.h"
+
+
 
 std::string ExtractFunctionName(const std::string& function) {
 	std::string result = "";
@@ -26,8 +28,6 @@ std::vector<std::string> ExtractFunctionArguments(const std::string& function) {
 	}
 	return result;
 }
-
-using FunctionHandler = std::function<std::string(const std::vector<std::string>&)>;
 
 static std::unordered_map<std::string, FunctionHandler> function_map = {
 	{"subst", [](const std::vector<std::string>& args) -> std::string {
@@ -106,27 +106,42 @@ static std::unordered_map<std::string, FunctionHandler> function_map = {
 		if (args.size() >= 1) return function_basename(args[0]);
 		return "";
 	}},
-	{"if", [](const std::vector<std::string>& args)->std::string {
-		if (args.size() == 2) return function_if(args[0], args[1]);
-		else if (args.size() > 2) return function_if(args[0], args[1], args[2]);
-
-		return "";
-	}},
-	{"or", [](const std::vector<std::string>& args)->std::string {
-		if (args.size() <= 0) return "";
-		else return function_or(args);
-	}}
 	// 추가
 };
 
-std::string Active_function(const std::string& function_name, const std::vector<std::string>& args) {
+//여기서 부터 수정
+std::unordered_map<std::string, ContextFunctionHandler> context_function_map = {
+	{"if", [](const std::vector<std::string>& args, const FunctionContext& ctx)->std::string {
+		if (args.size() == 2) return function_if(args[0], args[1], ctx);
+		else if (args.size() > 2) return function_if(args[0], args[1], args[2] ,ctx);
+
+		return "";
+	}}
+};
+
+
+bool IsNeedFunctionContext(const std::string& function_name) {
+	auto that = context_function_map.find(function_name);
+	if (that != context_function_map.end()) {
+		return true;
+	}
+	return false;
+}
+
+std::string Active_function(const std::string& function_name, const std::vector<std::string>& args, std::optional<FunctionContext> ctx) {
+
 	auto it = function_map.find(function_name);
 	if (it != function_map.end()) {
 		return it->second(args);
 	}
-	else {
-		return "";
+
+	auto that = context_function_map.find(function_name);
+	if (that != context_function_map.end() && ctx != std::nullopt) {
+		return that->second(args, *ctx);
 	}
+
+	return "";
+
 }
 
 std::string patsubs(const std::string& wildcard, const std::string& changer, const std::string& target_str) {
@@ -423,32 +438,68 @@ std::string function_join(const std::string& list1, const std::string& list2) {
 	}
 	return trim(result);
 }
-std::string function_if(const std::string& condition, const std::string& then) {
-	return "";
+
+std::string function_if(const std::string& condition, const std::string& then, const FunctionContext& ctx) {
+
+	assert(!(ctx.call_by_parser && ctx.call_by_syntax));
+
+	std::string temp = condition;
+	bool result = false;
+	ExpansionType et = DeduceExpansionType(condition);
+	std::unordered_set<std::string> visit;
+
+	auto eval_var = [&](std::string& ref) -> bool {
+		if (ctx.call_by_parser && ctx.parser)
+			return ctx.parser->VariableRef_expend(ref, visit);
+		else if (ctx.call_by_syntax && ctx.checker)
+			return ctx.checker->VariableRef_expend(ref);
+		return false;
+		};
+
+	auto eval_func = [&](std::string& ref) -> bool {
+		if (ctx.call_by_parser && ctx.parser)
+			return ctx.parser->Function_expend(ref);
+		else if (ctx.call_by_syntax && ctx.checker)
+			return ctx.checker->Function_expend(ref);
+		return false;
+		};
+
+	if (et == ExpansionType::VariableRef)
+		result = eval_var(temp);
+	else if (et == ExpansionType::Function)
+		result = eval_func(temp);
+	else if (et == ExpansionType::Literal && !condition.empty())
+		return then;
+	else
+		return "";
+
+	return result ? then : "";
 }
-std::string function_if(const std::string& condition, const std::string& then, const std::string& _else) {
-	return "";
+
+std::string function_if(const std::string& condition, const std::string& then, const std::string& _else, const FunctionContext& ctx) {
+	return function_if(condition, then, ctx).empty() ? _else : then;
 }
+
 std::string function_or(const std::vector<std::string>& conditions) {
 	return "";
 }
 
-//
-//std::string function_wildcard(const std::string& pattern) {
-//	std::vector<std::string> filenames = SearchFilesInWorkingDirectory();
-//	std::vector<std::string> patterns = SplitSpace(pattern);
-//	std::string result;
-//	for (const auto& ptn : patterns) {
-//		std::regex rx(glob_to_regex(ptn));
-//		for (const auto& files : filenames) {
-//			if (std::regex_match(files, rx)) {
-//				result = result + " " + files;
-//			}
-//		}
-//	}
-//
-//	return trim(result);
-//}
+
+std::string function_wildcard(const std::string& pattern) {
+	std::vector<std::string> filenames = SearchFilesInWorkingDirectory();
+	std::vector<std::string> patterns = SplitSpace(pattern);
+	std::string result;
+	for (const auto& ptn : patterns) {
+		std::regex rx(glob_to_regex(ptn));
+		for (const auto& files : filenames) {
+			if (std::regex_match(files, rx)) {
+				result = result + " " + files;
+			}
+		}
+	}
+
+	return trim(result);
+}
 
 //std::string function_if(const std::string& condition, const std::string& then) {
 //	std::unordered_map<std::string, std::string> var = SyntaxChecker::GetVariables();

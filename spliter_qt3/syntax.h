@@ -43,19 +43,21 @@ private:
 	std::unordered_map<std::string, Token> variables;
 	std::unordered_set<std::string> variable_name_map;
 
-
-	bool Function_expend(std::string& func);
-	bool VariableRef_expend(std::string& var);
-
 	std::pair<bool, std::optional<Mini_Error>> TargetCheck(Target& target);
 	std::pair<bool, std::optional<Mini_Error>> PrerequisiteCheck(Prerequisite& prerequisite, std::unordered_set<std::string>& result_preqs);
+	RecipeSet MakeRecipeSet(Recipe& raw, int pos);
 	bool RecipeCheck(std::optional<std::pair<int, Semi_colon>> semi_colon, std::vector<Recipe>& recipe);
 	bool precise_analysis_of_recipes(RecipeSet& rs);
 
 	ErrorCollector ec;
 	FileManagement fm;
 	DirectedAcyclicGraph dag;
+
 public:
+
+	bool Function_expend(std::string& func);
+	bool VariableRef_expend(std::string& var);
+
 	SyntaxChecker(Parser& p);
 	void SyntaxCheck();
 	Token ASTVariabletoToken(Variable& var);

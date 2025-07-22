@@ -326,3 +326,18 @@ std::string ExtractStem(std::string target, std::pair<std::string, std::string>&
 
 	return result;
 }
+
+std::vector<std::pair<int, std::string>> SpaceColumnSet(const std::string& str, int pos) {
+	std::vector<std::pair<int, std::string>> result;
+	std::vector<std::string> elements = SplitSpace(str);
+
+	int append = 0;
+	for (const auto& elem : elements) {
+		int find = str.find(elem, append);
+		std::pair<int, std::string> p = { find + pos, elem };
+		result.push_back(p);
+		append = append + elem.size();
+	}
+
+	return result;
+}

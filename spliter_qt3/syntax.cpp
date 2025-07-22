@@ -34,8 +34,10 @@ void SyntaxChecker::SyntaxCheck() {
 				StaticPatternRuleCheck(*spattern, true);
 			}
 		}
-		catch (const SyntaxError& e) {
-			ec.AddError(e.code, e.line, e.column, e.size, e.severity);
+		catch (const std::vector<SyntaxError>& err) {
+			for (const auto& e : err) {
+				ec.AddError(e.code, e.line, e.column, e.size, e.severity);
+			}
 		}
 	}
 
@@ -60,9 +62,22 @@ Token SyntaxChecker::ASTVariabletoToken(Variable& var)
 /////variable//////
 
 bool SyntaxChecker::Function_expend(std::string& func) {
+
+	std::string result;
+
 	std::string func_name = ExtractFunctionName(func);
 	std::vector<std::string> func_arg = ExtractFunctionArguments(func);
-	std::string result = Active_function(func_name, func_arg);
+
+
+	if (IsNeedFunctionContext(func_name)) {
+		FunctionContext fc;
+		fc.checker = this;
+		fc.call_by_syntax = true;
+		result = Active_function(func_name, func_arg, fc);
+	}
+	else {
+		result = Active_function(func_name, func_arg);
+	}
 	func.swap(result);
 	return true;
 }
@@ -174,7 +189,6 @@ bool SyntaxChecker::VariableCheck(Variable& var)
 	Token tk = ASTVariabletoToken(var);
 	variables.emplace(var.name.second, tk);
 	return true;
-
 }
 
 /////variable//////
@@ -348,91 +362,71 @@ std::pair<bool, std::optional<Mini_Error>> SyntaxChecker::PrerequisiteCheck(Prer
 		}
 	}
 	
-	result.first = false; 
+	result.first = false;
 	Mini_Error me({ "E151", Severity::Error });
 	result.second = me;
 	return result;
 }
 
+RecipeSet SyntaxChecker::MakeRecipeSet(Recipe& raw, int pos = 0) {
+	RecipeSet rs;
+	std::vector<SyntaxError> error_stack;
+
+	rs.raw_recipe = raw;
+	std::string raw_string = raw.second;
+
+	std::string expend_result = "";
+	std::vector<std::pair<int, std::string>> elements = SpaceColumnSet(raw_string, pos);
+
+	for (const auto& [column, elem] : elements) {
+		std::string expend = elem;
+		ExpansionType et = DeduceExpansionType(elem);
+		if (et == ExpansionType::VariableRef) {
+			if (!VariableRef_expend(expend)) {
+				SyntaxError e("E501", raw.first, column, elem.size(), Severity::Error);
+				error_stack.push_back(e);
+			}
+			else {
+				rs.recipe_map.emplace(elem, expend);
+			}
+		}
+
+		else if (et == ExpansionType::Function) {
+			if (!Function_expend(expend)) {
+				SyntaxError e("E502", raw.first, column, elem.size(), Severity::Error);
+				error_stack.push_back(e);
+			}
+			else {
+				rs.recipe_map.emplace(expend, elem);
+			}
+		}
+
+		expend_result = expend_result + " " + expend;
+	}
+
+	rs.expend_recipe = trim(expend_result);
+
+	if (!error_stack.empty()) {
+		throw error_stack;
+	}
+
+	return rs;
+}
+
 bool SyntaxChecker::RecipeCheck(std::optional<std::pair<int, Semi_colon>> semi_colon, std::vector<Recipe>& recipes) {
 
-	std::vector<RecipeSet> repice_stack;
-
-	if (semi_colon != std::nullopt) {
-		RecipeSet rs;
-		rs.raw_recipe = semi_colon->second;
-		std::string raw = semi_colon->second.second;
-
-		std::vector<std::string> elements = SplitSpace(raw);
-		std::string expend_result = "";
-
-		for (const auto& elem : elements) {
-			std::string expend = elem;
-			ExpansionType et = DeduceExpansionType(elem);
-			if (et == ExpansionType::VariableRef) {
-				if (!VariableRef_expend(expend)) {
-					SyntaxError e("E501", semi_colon->first, raw.find(elem) + semi_colon->second.first, elem.size(), Severity::Error);
-					throw e;
-				}
-				else {
-					rs.recipe_map.emplace(elem, expend);
-				}
-			}
-
-			else if (et == ExpansionType::Function) {
-				if (!Function_expend(expend)) {
-					SyntaxError e("E502", semi_colon->first, raw.find(elem) + semi_colon->second.first, elem.size(), Severity::Error);
-					throw e;
-				}
-				else {
-					rs.recipe_map.emplace(expend, elem);
-				}
-			}
-
-			expend_result = expend_result + " " + expend;
-
-		}
-		rs.expend_recipe = trim(expend_result);
+	if (semi_colon) {
+		column pos = semi_colon->second.first;
+		Recipe rp = { semi_colon->first, semi_colon->second.second };
+		RecipeSet rs = MakeRecipeSet(rp, pos);
 		precise_analysis_of_recipes(rs);
 	}
 
-	for (const auto& recipe : recipes) {
-		RecipeSet rs;
-
-		rs.raw_recipe = recipe;
-
-		std::vector<std::string> elements = SplitSpace(recipe.second);
-		std::string expend_result = "";
-
-		for (const auto& elem : elements) {
-			std::string expend = elem;
-
-			ExpansionType et = DeduceExpansionType(elem);
-			if (et == ExpansionType::VariableRef) {
-				if (!VariableRef_expend(expend)) {
-					SyntaxError e("E501", recipe.first, recipe.second.find(elem), elem.size(), Severity::Error);
-					throw e;
-				}
-				else {
-					rs.recipe_map.emplace(elem, expend);
-				}
-			}
-
-			else if (et == ExpansionType::Function) {
-				if (!Function_expend(expend)) {
-					SyntaxError e("E502", recipe.first, recipe.second.find(elem), elem.size(), Severity::Error);
-					throw e;
-				}
-				else {
-					rs.recipe_map.emplace(expend, elem);
-				}
-			}
-
-			expend_result = expend_result + " " + expend;
-		}
-		rs.expend_recipe = trim(expend_result);
+	for (auto& recipe : recipes) {
+		RecipeSet rs = MakeRecipeSet(recipe);
 		precise_analysis_of_recipes(rs);
 	}
+
 
 	return true;
 }
@@ -444,12 +438,14 @@ bool SyntaxChecker::precise_analysis_of_recipes(RecipeSet& rs){
 
 bool SyntaxChecker::ExplicitRuleCheck(Explicit_Rule& ex, bool toplevel){
 
+	std::vector<SyntaxError> error_stack;
+
 	{
 		std::pair<bool, std::optional<Mini_Error>>target_res = TargetCheck(ex.target);
 
 		if (!target_res.first && toplevel) {
 			SyntaxError e(target_res.second->first, ex.line, ex.target.first, ex.target.second.size(), target_res.second->second);
-			throw e;
+			error_stack.push_back(e);
 		}
 		else if (!target_res.first && !toplevel) {
 			return false;
@@ -461,19 +457,24 @@ bool SyntaxChecker::ExplicitRuleCheck(Explicit_Rule& ex, bool toplevel){
 		std::pair<bool, std::optional<Mini_Error>> preq_res = PrerequisiteCheck(preq, result_preqs);
 		if (!preq_res.first && toplevel) {
 			SyntaxError e(preq_res.second->first, ex.line, preq.first, preq.second.size(), preq_res.second->second);
-			throw e;
+			error_stack.push_back(e);
 		}
 		else if (!preq_res.first && !toplevel) {
 			return false;
 		}
 	}
 
-	if (ex.semi_colon_recipe.second != "") {
+	if (ex.semi_colon_recipe.second  == "") {
 		RecipeCheck(std::nullopt, ex.recipes);
 	}
 	else {
 		std::pair<int, Semi_colon> semi = {ex.line, ex.semi_colon_recipe};
 		RecipeCheck(semi, ex.recipes);
+	}
+
+	//throw
+	if (!error_stack.empty()) {
+		throw error_stack;
 	}
 
 	dag.AddEdge(ex.target.second, result_preqs);
@@ -482,12 +483,14 @@ bool SyntaxChecker::ExplicitRuleCheck(Explicit_Rule& ex, bool toplevel){
 
 bool SyntaxChecker::MultipleTargetCheck(Multiple_Target& mt, bool toplevel){
 
+	std::vector<SyntaxError> error_stack;
+
 	for (auto& target : mt.targets) {
 		std::pair<bool, std::optional<Mini_Error>>target_res = TargetCheck(target);
 
 		if (!target_res.first && toplevel) {
 			SyntaxError e(target_res.second->first, mt.line, target.first, target.second.size(), target_res.second->second);
-			throw e;
+			error_stack.push_back(e);
 		}
 		else if (!target_res.first && !toplevel) {
 			return false;
@@ -499,7 +502,7 @@ bool SyntaxChecker::MultipleTargetCheck(Multiple_Target& mt, bool toplevel){
 		std::pair<bool, std::optional<Mini_Error>> preq_res = PrerequisiteCheck(preq, result_preqs);
 		if (!preq_res.first && toplevel) {
 			SyntaxError e(preq_res.second->first, mt.line, preq.first, preq.second.size(), preq_res.second->second);
-			throw e;
+			error_stack.push_back(e);
 		}
 		else if (!preq_res.first && !toplevel) {
 			return false;
@@ -517,30 +520,42 @@ bool SyntaxChecker::MultipleTargetCheck(Multiple_Target& mt, bool toplevel){
 		if (!ExplicitRuleCheck(ex, false)) {
 			if (toplevel) {
 				SyntaxError e("E105", mt.line, target.first, target.second.size(), Severity::Error);
-				throw e;
-			} 
-			return false;
+				error_stack.push_back(e);
+			}
+			else {
+				return false;
+			}
 		}
 	}
+
+	//throw
+	if (!error_stack.empty()) {
+		throw error_stack;
+	}
+
 	return true;
 }
 
 bool SyntaxChecker::PatternRuleCheck(Pattern_Rule& pr, bool toplevel){
-
+	std::vector<SyntaxError> error_stack;
 	if (pr.target_pattern.second.find('%') == std::string::npos) {
 		if (toplevel) {
 			SyntaxError e("E201", pr.line, pr.target_pattern.first, pr.target_pattern.second.size(), Severity::Error);
-			throw e;
+			error_stack.push_back(e);
 		}
-		return false;
+		else {
+			return false;
+		}
 	}
 
 	else if (SeparatorCounter(pr.target_pattern.second, '%') != 1) {
 		if (toplevel) {
 			SyntaxError e("E202", pr.line, pr.target_pattern.first, pr.target_pattern.second.size(), Severity::Error);
-			throw e;
+			error_stack.push_back(e);
 		}
-		return false;
+		else {
+			return false;
+		}
 	}
 
 	for (const auto& preq : pr.prerequisite_pattern) {
@@ -551,10 +566,16 @@ bool SyntaxChecker::PatternRuleCheck(Pattern_Rule& pr, bool toplevel){
 		else if (SeparatorCounter(preq.second, '%') > 1) {
 			if (toplevel) {
 				SyntaxError e("E203", pr.line, preq.first, preq.second.size(), Severity::Error);
-				throw e;
+				error_stack.push_back(e);
 			}
-			return false;
+			else {
+				return false;
+			}
 		}
+	}
+
+	if (!error_stack.empty()) {
+		throw error_stack;
 	}
 
 
@@ -562,21 +583,27 @@ bool SyntaxChecker::PatternRuleCheck(Pattern_Rule& pr, bool toplevel){
 }
 
 bool SyntaxChecker::StaticPatternRuleCheck(Static_Pattern_Rule& spr, bool toplevel){
+	std::vector<SyntaxError> error_stack;
+
 	//target_pattern 검사
 	if (spr.target_pattern.second.find('%') == std::string::npos) {
 		if (toplevel) {
 			SyntaxError e("E201", spr.line, spr.target_pattern.first, spr.target_pattern.second.size(), Severity::Error);
-			throw e;
+			error_stack.push_back(e);
 		}
-		return false;
+		else {
+			return false;
+		}
 	}
 
 	else if (SeparatorCounter(spr.target_pattern.second, '%') != 1) {
 		if (toplevel) {
 			SyntaxError e("E202", spr.line, spr.target_pattern.first, spr.target_pattern.second.size(), Severity::Error);
-			throw e;
+			error_stack.push_back(e);
 		}
-		return false;
+		else {
+			return false;
+		}
 	}
 
 	//target 집합들의 원소를 target_pattern에 맞는지 비교
@@ -596,6 +623,7 @@ bool SyntaxChecker::StaticPatternRuleCheck(Static_Pattern_Rule& spr, bool toplev
 	for (const auto& preq : spr.prerequisite_pattern) {
 		if (SeparatorCounter(preq.second, '%') > 1) {
 			SyntaxError e("E202", spr.line, preq.first, preq.second.size(), Severity::Error);
+			error_stack.push_back(e);
 		}
 		else {
 			if (SeparatorCounter(preq.second, '%') == 1) {
@@ -605,6 +633,10 @@ bool SyntaxChecker::StaticPatternRuleCheck(Static_Pattern_Rule& spr, bool toplev
 				preq_files.push_back(preq.second);
 			}
 		}
+	}
+
+	if (!error_stack.empty()) {
+		throw error_stack;
 	}
 
 	for (const auto& target : matching_targets) {
@@ -628,7 +660,6 @@ bool SyntaxChecker::StaticPatternRuleCheck(Static_Pattern_Rule& spr, bool toplev
 			return false;
 		}
 	}
-
 
 	return true;
 }

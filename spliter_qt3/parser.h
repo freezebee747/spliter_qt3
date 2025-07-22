@@ -2,9 +2,9 @@
 #pragma once
 #include <optional>
 
-#include "read.h"
 #include "error.h"
 #include "keyword.h"
+#include "read.h"
 
 using ASTNodeList = std::vector<std::shared_ptr<ASTNode>>;
 using FileLines = std::vector<std::pair<unsigned, std::string>>;
@@ -38,10 +38,9 @@ private:
 	PatternRuleList pattern_map;
 	ErrorCollector ec;
 	std::vector<Comment> comment_list;
+	std::optional<std::string> default_target = std::nullopt;
 
 	bool variable_expend(Variable& var, std::unordered_set<std::string>& visited);
-	bool VariableRef_expend(std::string& var, std::unordered_set<std::string>& visited);
-	bool Function_expend(std::string& func);
 
 public:
 	TargetSet& GetTargets();
@@ -49,6 +48,7 @@ public:
 	ASTNodeList Getnodes();
 	ErrorCollector& GetError();
 	std::vector<Comment> GetComment();
+	std::optional<std::string> GetDefaultTarget();
 
 	void SetVariable_map(VariableMap& map) {
 		variable_map = map;
@@ -59,11 +59,12 @@ public:
 	void parsing(const std::string& text);
 	std::vector<Block> SplitByBlock(FileLines& file);
 
-	bool directive_override(Block& block);
+	bool VariableRef_expend(std::string& var, std::unordered_set<std::string>& visited);
+	bool Function_expend(std::string& func);
 
 	//지시자 처리 메서드
 	bool ProcessingDirective(Block& block);
-
+	bool directive_override(Block& block);
 
 };
 

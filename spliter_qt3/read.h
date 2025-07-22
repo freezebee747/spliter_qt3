@@ -24,6 +24,7 @@ std::vector<std::string> tokenizeMakefileStyle(const std::string& input);
 std::pair<std::string, std::string> SplitPattern(const std::string& pattern);
 bool PatternMatching(const std::string& target, const std::string& pattern);
 std::string ExtractStem(std::string target, std::pair<std::string, std::string>& pattern);
+std::vector<std::pair<int, std::string>> SpaceColumnSet(const std::string& str, int pos = 0);
 bool hasWhitespace(const std::string& str);
 std::string join(const std::vector<std::string>& vec, const std::string& delimiter);
 

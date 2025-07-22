@@ -1,4 +1,4 @@
-#include "file.h"
+ï»¿#include "file.h"
 
 DirSingleton& DirSingleton::GetInstance() {
 	static DirSingleton instance;
@@ -42,7 +42,7 @@ void FileManagement::OnDirChanged(const std::string& newDir) {
 	SaveFilename();
 }
 
-//.c³ª .o ÆÄÀÏµéÀ» Ã£±â À§ÇÑ ¸Ş¼­µå
+//.cë‚˜ .o íŒŒì¼ë“¤ì„ ì°¾ê¸° ìœ„í•œ ë©”ì„œë“œ
 std::vector<std::string> FileManagement::find_last_of(const std::string& last) {
 	std::vector<std::string> names;
 
@@ -79,7 +79,7 @@ std::unordered_set<std::string> FileManagement::SearchFilenames(const std::strin
 
 	std::filesystem::path p = directory;
 	if (!std::filesystem::exists(p) || !std::filesystem::is_directory(p)) {
-		std::cerr << "À¯È¿ÇÏÁö ¾ÊÀº µğ·ºÅÍ¸®ÀÔ´Ï´Ù.\n";
+		std::cerr << "ìœ íš¨í•˜ì§€ ì•Šì€ ë””ë ‰í„°ë¦¬ì…ë‹ˆë‹¤.\n";
 		return filenames;
 	}
 
@@ -107,7 +107,7 @@ std::vector<std::string> SearchFilesInWorkingDirectory() {
 	std::filesystem::path p = DirSingleton::GetInstance().Getdir();
 	std::vector<std::string> filenames;
 	if (!std::filesystem::exists(p) || !std::filesystem::is_directory(p)) {
-		std::cerr << "À¯È¿ÇÏÁö ¾ÊÀº µğ·ºÅÍ¸®ÀÔ´Ï´Ù.\n";
+		std::cerr << "ìœ íš¨í•˜ì§€ ì•Šì€ ë””ë ‰í„°ë¦¬ì…ë‹ˆë‹¤.\n";
 		return std::vector<std::string>();
 	}
 
