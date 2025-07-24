@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "syntaxhighlighter.h"
+#include "codeeditor.h"
 #include <QMainWindow>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QString>
 #include <QTimer>
 
@@ -18,7 +19,7 @@ private slots:
 	void parsingText();
 private:
 	ASTHighlighter* highlighter;
-	QTextEdit* textEdit;
+	CodeEditor* textEdit;
 
 	void createActions();
 	void Analyze();

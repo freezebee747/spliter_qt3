@@ -61,9 +61,15 @@
     <ClCompile Include="DAG.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="codeeditor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="mainwindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="codeeditor.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

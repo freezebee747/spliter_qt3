@@ -1,7 +1,7 @@
 ﻿#include "mainwindow.h"
 
 MainWindow::MainWindow(QWidget* parent)
-	: QMainWindow(parent), textEdit(new QTextEdit(this)), syntaxChecker(parser)
+	: QMainWindow(parent), textEdit(new CodeEditor(this)), syntaxChecker(parser)
 {
 	DirSingleton::GetInstance().SetDir("C:\\testfolder");
 

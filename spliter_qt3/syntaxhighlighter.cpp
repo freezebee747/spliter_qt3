@@ -58,7 +58,7 @@ void ASTHighlighter::setAST(const std::vector<std::shared_ptr<ASTNode>>& ast,
 				if (recipeLine >= sourceLines.size()) continue;
 
 				int len = QString::fromStdString(recipe.second).length() + 1;
-				lineHighlights[recipeLine].push_back({ 0, len, HighlightType::Recipe });
+				lineHighlights[recipeLine].push_back({ 0, len + 1, HighlightType::Recipe });
 			}
 		}
 
@@ -114,7 +114,7 @@ void ASTHighlighter::setAST(const std::vector<std::shared_ptr<ASTNode>>& ast,
 				if (recipeLine >= sourceLines.size()) continue;
 
 				int len = QString::fromStdString(recipe.second).length() + 1;
-				lineHighlights[recipeLine].push_back({ 0, len, HighlightType::Recipe });
+				lineHighlights[recipeLine].push_back({ 0, len + 1, HighlightType::Recipe });
 			}
 
 		}

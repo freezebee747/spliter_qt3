@@ -97,6 +97,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="codeeditor.cpp" />
     <ClCompile Include="DAG.cpp" />
     <ClCompile Include="error.cpp" />
     <ClCompile Include="file.cpp" />
@@ -115,6 +116,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.h" />
+    <QtMoc Include="codeeditor.h" />
     <ClInclude Include="DAG.h" />
     <ClInclude Include="error.h" />
     <ClInclude Include="file.h" />
