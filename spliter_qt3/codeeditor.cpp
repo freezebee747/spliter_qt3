@@ -32,22 +32,18 @@ void customRemoveSelectedText(QPlainTextEdit* edit){
 	int posInBlock = cursor.positionInBlock();
 	QString blockText = cursor.block().text();
 
-	// --- 왼쪽으로 확장 ---
 	int start = posInBlock;
 	while (start > 0 && !blockText[start - 1].isSpace())
 		start--;
 
-	// --- 오른쪽으로 확장 ---
 	int end = posInBlock;
 	while (end < blockText.length() && !blockText[end].isSpace())
 		end++;
 
-	// --- 커서 위치 보정 ---
 	QTextCursor tempCursor = cursor;
 	tempCursor.setPosition(cursor.block().position() + start);
 	tempCursor.setPosition(cursor.block().position() + end, QTextCursor::KeepAnchor);
 
-	// --- 선택 영역 삭제 ---
 	tempCursor.removeSelectedText();
 }
 

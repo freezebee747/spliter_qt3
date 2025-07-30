@@ -151,6 +151,24 @@ void ASTHighlighter::setAST(const std::vector<std::shared_ptr<ASTNode>>& ast,
 
 			}
 		}
+
+		else if (auto* rule = dynamic_cast<Phony_Target*>(node.get())) {
+			const int line = rule->line - 1;
+			if (line >= sourceLines.size()) continue;
+
+			int targetCol = byteOffsetToUtf16Column(sourceLines[line], rule->target.first);
+			int targetLen = QString::fromStdString(rule->target.second).length();
+			lineHighlights[line].push_back({ targetCol, targetLen, HighlightType::Phony });
+
+			for (const auto& recipe : rule->recipes) {
+				int recipeLine = recipe.first - 1;
+				if (recipeLine >= sourceLines.size()) continue;
+
+				int len = QString::fromStdString(recipe.second).length() + 2;
+				lineHighlights[recipeLine].push_back({ 0, len, HighlightType::Recipe });
+			}
+
+		}
 		// 기타 노드 처리
 	}
 	rehighlight();
@@ -210,6 +228,9 @@ void ASTHighlighter::highlightBlock(const QString& text) {
 				break;
 			case HighlightType::Target:
 				fmt.setForeground(Qt::darkMagenta);
+				break;
+			case HighlightType::Phony:
+				fmt.setForeground(Qt::darkCyan);
 				break;
 			case HighlightType::Recipe:
 				fmt.setForeground(Qt::gray);

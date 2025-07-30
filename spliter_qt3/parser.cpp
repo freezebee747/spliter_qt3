@@ -207,6 +207,12 @@ std::vector<Block> Parser::SplitByBlock(FileLines& file) {
 			block = std::make_unique<Block>();
 			block->type = BlockType::rule;
 			block->_lines.push_back({ line, str });
+			auto next_it = std::next(it);
+			if (next_it != combinedLines.end() && next_it->second[0] != '\t') {
+				blocks.push_back(*block);
+				block.reset();
+				continue;
+			}
 
 		}
 
@@ -228,6 +234,7 @@ std::vector<Block> Parser::SplitByBlock(FileLines& file) {
 			}
 			continue;
 		}
+
 	}
 
 	if (block) {

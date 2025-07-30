@@ -15,6 +15,7 @@ enum class HighlightType {
 	Prerequisite,
 	Directive,
 	Recipe,
+	Phony,
 	Comment,
 	Pattern,
 	Warning,
