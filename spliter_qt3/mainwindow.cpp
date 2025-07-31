@@ -1,9 +1,13 @@
 ﻿#include "mainwindow.h"
+#include "toolbar.h"
 
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent), textEdit(new CodeEditor(this)), syntaxChecker(parser)
 {
 	DirSingleton::GetInstance().SetDir("C:\\testfolder");
+
+	ToolBar* toolBar = new ToolBar(this);
+	addToolBar(Qt::TopToolBarArea, toolBar);
 
 	setCentralWidget(textEdit);
 	resize(800, 600);
@@ -14,9 +18,32 @@ MainWindow::MainWindow(QWidget* parent)
 	createActions();
 	textEdit->setTabStopDistance(4 * textEdit->fontMetrics().horizontalAdvance(' '));
 
-	QTimer* parser_timer = new QTimer(this);
-	connect(parser_timer, &QTimer::timeout, this, &MainWindow::Analyze); // 슬롯 연결
-	parser_timer->start(1000); // 1초마다 timeout 시그널 발생
+	// ----- 입력 딜레이용 타이머 -----
+	parseTimer = new QTimer(this);
+	parseTimer->setSingleShot(true);   // 한 번만 실행되도록
+	
+	connect(textEdit, &QPlainTextEdit::textChanged, this, [this]() {
+		if (analyzing) return;  // Analyze 중이면 무시
+		if (parseTimer->isActive()) {
+			parseTimer->stop();
+		}
+		parseTimer->start(1000);
+	});
+
+	connect(parseTimer, &QTimer::timeout, this, [this]() {
+		analyzing = true;
+		Analyze();
+		analyzing = false;
+	});
+
+	connect(toolBar->openAction, &QAction::triggered, this, [this]() {
+		QString fileName = QFileDialog::getOpenFileName(this, "파일 열기");
+		if (!fileName.isEmpty()) {
+			loadFile(fileName);   // 직접 만든 파일 로드 함수 호출
+		}
+	});
+
+
 }
 
 MainWindow::~MainWindow(){
@@ -65,4 +92,26 @@ void MainWindow::Analyze() {
 
 	highlighter->setErrors(syntaxChecker.GetError(), sourceLines);
 	
+}
+
+void MainWindow::loadFile(const QString& fileName){
+	QFile file(fileName);
+	if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		QMessageBox::warning(this, "파일 열기 오류",
+			"파일을 열 수 없습니다:\n" + file.errorString());
+		return;
+	}
+
+	QTextStream in(&file);
+	in.setEncoding(QStringConverter::Utf8);   // UTF-8 강제 설정
+	QString content = in.readAll();
+
+	textEdit->setPlainText(content);
+	file.close();
+
+	// 최근 열었던 파일 이름 저장 (예: 타이틀바 갱신)
+	QFileInfo info(fileName);
+	currentFile = info.filePath();   // currentFile은 MainWindow 멤버로 추가
+	DirSingleton::GetInstance().SetDir(info.absolutePath().toUtf8().constData()); // 디렉토리 갱신
+	setWindowTitle(QString("%1 - Makefile 편집기").arg(QFileInfo(fileName).fileName()));
 }

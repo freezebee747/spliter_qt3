@@ -3,6 +3,9 @@
 #include "codeeditor.h"
 #include <QMainWindow>
 #include <QPlainTextEdit>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QMessageBox>
 #include <QString>
 #include <QTimer>
 
@@ -20,13 +23,19 @@ private slots:
 private:
 	ASTHighlighter* highlighter;
 	CodeEditor* textEdit;
+	QTimer* parseTimer;
+	QString currentFile;
 
 	void createActions();
 	void Analyze();
+	void loadFile(const QString& fileName);
 
 	QAction* exitAct;
 	ASTNodeList ASTList;
 
 	Parser parser;
 	SyntaxChecker syntaxChecker;
+
+	bool analyzing = false;
+
 };

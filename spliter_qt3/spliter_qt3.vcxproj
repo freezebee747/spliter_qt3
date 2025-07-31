@@ -107,6 +107,7 @@
     <ClCompile Include="read.cpp" />
     <ClCompile Include="syntax.cpp" />
     <ClCompile Include="syntaxhighlighter.cpp" />
+    <ClCompile Include="toolbar.cpp" />
     <QtRcc Include="spliter_qt3.qrc" />
     <QtUic Include="spliter_qt3.ui" />
     <ClCompile Include="main.cpp" />
@@ -116,6 +117,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AST.h" />
+    <QtMoc Include="toolbar.h" />
     <QtMoc Include="codeeditor.h" />
     <ClInclude Include="DAG.h" />
     <ClInclude Include="error.h" />
